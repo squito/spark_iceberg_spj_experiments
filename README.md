@@ -10,11 +10,11 @@ A Scala project for exploring **Storage Partitioned Join (SPJ)** with Apache Spa
 
 Three join scenarios were run with uniform `days(created_at)` calendar partitioning and timestamp-equality join keys (`c.created_at = e.created_at`). SPJ-related Spark configs are enabled via `IcebergSpark` (see below).
 
-| Test | Events table | Calendar range | Rows | SPJ | Why |
+| Test | Events Table Has Partition Evolution? | Join Range Has Multiple Partition Specs? | Rows | SPJ | Why |
 |------|--------------|----------------|------|-----|-----|
-| **1** | `local.db.events_2026` | 2026 only (Jan–Jun) | 6,000 | **YES** | Both tables use a single `days(created_at)` partition spec; both scans report `groupedBy=created_at_day` with no pre-join shuffle. |
-| **2** | `local.db.events` | 2026 only | 6,000 | **NO** | `events` has mixed partition specs (month-partitioned 2024–2025 files, day-partitioned 2026 files). The events scan reports empty `groupedBy`; Spark shuffles both sides before the join. |
-| **3** | `local.db.events` | 2024–2026 full range | 30,000 | **NO** | Same as test 2 — partition evolution prevents co-partitioned reads even when filtering to overlapping calendar days. |
+| **1** | No | No | 6,000 | **YES** | Both tables use a single `days(created_at)` partition spec; both scans report `groupedBy=created_at_day` with no pre-join shuffle. |
+| **2** | Yes | No | 6,000 | **NO** | `events` has mixed partition specs (month-partitioned 2024–2025 files, day-partitioned 2026 files). The events scan reports empty `groupedBy`; Spark shuffles both sides before the join. |
+| **3** | Yes | Yes | 30,000 | **NO** | Same as test 2 — partition evolution prevents co-partitioned reads even when filtering to overlapping calendar days. |
 
 **Key finding:** SPJ requires (a) matching, uniform `days(created_at)` partitioning on both sides, and (b) a join on timestamp equality that Spark can align with Iceberg’s reported data grouping. Joining on `local.system.days(created_at)` does not trigger SPJ even when scans show `groupedBy=created_at_day`.
 
