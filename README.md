@@ -1,0 +1,192 @@
+# Spark + Iceberg SPJ Demo
+
+A Scala project for exploring **Storage Partitioned Join (SPJ)** with Apache Spark and Apache Iceberg. It generates Iceberg tables with different partition layouts, joins them to a calendar dimension, and inspects the physical plan to see whether Spark avoided a pre-join shuffle.
+
+**Stack:** Spark **4.1.2**, Scala **2.13**, Iceberg **1.11.0** (`iceberg-spark-runtime-4.1_2.13`)
+
+## SPJ test results
+
+Three join scenarios were run with uniform `days(created_at)` calendar partitioning and timestamp-equality join keys (`c.created_at = e.created_at`). SPJ-related Spark configs are enabled via `IcebergSpark` (see below).
+
+| Test | Events table | Calendar range | Rows | SPJ | Why |
+|------|--------------|----------------|------|-----|-----|
+| **1** | `local.db.events_2026` | 2026 only (Jan–Jun) | 6,000 | **YES** | Both tables use a single `days(created_at)` partition spec; both scans report `groupedBy=created_at_day` with no pre-join shuffle. |
+| **2** | `local.db.events` | 2026 only | 6,000 | **NO** | `events` has mixed partition specs (month-partitioned 2024–2025 files, day-partitioned 2026 files). The events scan reports empty `groupedBy`; Spark shuffles both sides before the join. |
+| **3** | `local.db.events` | 2024–2026 full range | 30,000 | **NO** | Same as test 2 — partition evolution prevents co-partitioned reads even when filtering to overlapping calendar days. |
+
+**Key finding:** SPJ requires (a) matching, uniform `days(created_at)` partitioning on both sides, and (b) a join on timestamp equality that Spark can align with Iceberg’s reported data grouping. Joining on `local.system.days(created_at)` does not trigger SPJ even when scans show `groupedBy=created_at_day`.
+
+Latest run output: [`spark-4.1-tests/summary.txt`](spark-4.1-tests/summary.txt)
+
+## Requirements
+
+- Java 17
+- Maven 3.9+
+- curl (helper scripts download Spark on first run)
+
+## Quick start
+
+Generate the Iceberg warehouse (clears and recreates `warehouse/`):
+
+```bash
+./scripts/run-demo.sh
+```
+
+This creates two events tables:
+
+- **`local.db.events`** — partition evolution demo
+  - 2024–2025: `months(created_at)`
+  - Evolution: `REPLACE PARTITION FIELD months(created_at) WITH day(created_at)` (days only, not months + days)
+  - 2026: new data written under the day partition spec
+- **`local.db.events_2026`** — 2026-only control table with uniform `days(created_at)` partitioning
+
+## Running the SPJ tests
+
+### All three tests (recommended)
+
+Regenerates data and runs tests 1–3 with the SPJ-friendly settings (`JOIN_STYLE=timestamp`, `PARTITION_STRATEGY=days`):
+
+```bash
+./scripts/run-three-spj-tests.sh
+```
+
+Output goes to `spark-4.1-tests/` (`summary.txt` plus one log file per test).
+
+### Individual tests
+
+First generate data, then run the calendar join with the desired mode:
+
+```bash
+./scripts/run-demo.sh
+
+# Test 1 — SPJ expected
+export JOIN_STYLE=timestamp SPJ_PARTIAL_CLUSTERED=true PARTITION_STRATEGY=days
+./scripts/run-calendar-join.sh warehouse 2026 events_2026 days
+
+# Test 2 — SPJ not expected
+./scripts/run-calendar-join.sh warehouse 2026 events days
+
+# Test 3 — SPJ not expected
+./scripts/run-calendar-join.sh warehouse full events days
+```
+
+### Other demos
+
+```bash
+# Positive SPJ control: bucket-partitioned tables joined on partition keys
+./scripts/run-spj-demo.sh
+
+# Broader SPJ config experiments (partition strategy, join style, partial clustering)
+./scripts/run-spj-experiments.sh
+```
+
+### Interactive shells
+
+```bash
+./scripts/run-spark-shell.sh
+./scripts/run-spark-sql.sh
+```
+
+## Project layout
+
+```
+├── pom.xml                              # Maven build (Spark 4.1.2, Iceberg 1.11.0)
+├── conf/
+│   ├── spark-defaults.conf              # Shared Iceberg catalog settings
+│   └── log4j2-spark.properties          # Spark logging config
+├── scripts/
+│   ├── common.sh                        # Spark/Iceberg version defaults, download, packages
+│   ├── run-demo.sh                      # Generate events tables (PartitionEvolutionDataGen)
+│   ├── run-calendar-join.sh             # Calendar join + SPJ plan analysis
+│   ├── run-three-spj-tests.sh           # Run all three SPJ tests end-to-end
+│   ├── run-spj-demo.sh                  # Bucket-partition SPJ control case
+│   ├── run-spj-experiments.sh           # Matrix of SPJ configuration experiments
+│   ├── run-spark-shell.sh
+│   └── run-spark-sql.sh
+├── src/main/scala/com/example/iceberg/
+│   ├── PartitionEvolutionDataGen.scala  # Data generation for events + events_2026
+│   ├── DailyCalendarJoin.scala          # Calendar table creation and join query
+│   ├── IcebergTableSetup.scala          # Table DDL, partition evolution, join clauses
+│   ├── PartitionStrategy.scala          # days vs month_day partition strategies
+│   ├── IcebergSpark.scala               # Spark session with SPJ-oriented configs
+│   ├── SpjPlanAnalyzer.scala            # Detect SPJ from executed physical plan
+│   └── SpjVerificationDemo.scala        # Positive SPJ control (bucket join)
+└── warehouse/                           # Local Iceberg warehouse (runtime)
+```
+
+## Code structure
+
+### Data generation — `PartitionEvolutionDataGen`
+
+Clears the warehouse, then builds:
+
+| Table | Partitioning | Data |
+|-------|--------------|------|
+| `local.db.events` | Starts `months(created_at)`, evolves to `days(created_at)` only | 1,000 events/month for 2024–2025, then 2026 Jan–Jun |
+| `local.db.events_2026` | `days(created_at)` from creation | 2026 Jan–Jun only |
+
+Events are spread across days 1–28 of each month with midnight timestamps (one `created_at` per day in the synthetic data).
+
+### Calendar join — `DailyCalendarJoin`
+
+Creates `local.db.calendar_days` (one row per day) and inner-joins it to an events table.
+
+**Arguments:** `[warehouse] [full|2026] [events|events_2026] [days|month_day]`
+
+- `full` — calendar 2024-01-01 through 2026-06-30
+- `2026` — calendar 2026-01-01 through 2026-06-30
+- `events` — evolved table; `events_2026` — uniform control table
+
+After the join runs, `SpjPlanAnalyzer` prints whether SPJ was used (SortMergeJoin with no pre-join `Exchange` on either side).
+
+### SPJ configuration — `IcebergSpark`
+
+Join-oriented apps use a shared Spark session with:
+
+- `spark.sql.sources.v2.bucketing.enabled=true`
+- `spark.sql.iceberg.planning.preserve-data-grouping=true`
+- `spark.sql.sources.v2.bucketing.pushPartValues.enabled=true`
+- `spark.sql.sources.v2.bucketing.partiallyClusteredDistribution.enabled=true` (default)
+- `spark.sql.autoBroadcastJoinThreshold=-1` (disable broadcast joins for analysis)
+- `spark.sql.requireAllClusterKeysForCoPartition=false`
+
+### Plan analysis — `SpjPlanAnalyzer`
+
+Unwraps the AQE final plan, finds the join operator, and checks whether either input subtree contains a shuffle `Exchange` before the join. Also prints a formatted physical plan excerpt including Iceberg scan `groupedBy` metadata.
+
+## Environment variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SPARK_VERSION` | `4.1.2` | Spark version (scripts download matching binary) |
+| `SCALA_VERSION` | `2.13` | Scala binary version for Iceberg runtime jar |
+| `ICEBERG_VERSION` | `1.11.0` | Iceberg version |
+| `SPARK_HOME` | `.spark/spark-${SPARK_VERSION}-bin-hadoop3` | Spark install directory |
+| `SPARK_MASTER` | `local[*]` | Spark master URL |
+| `WAREHOUSE_DIR` | `./warehouse` | Iceberg warehouse for the `local` catalog |
+| `PARTITION_STRATEGY` | `days` | Calendar table partitioning (`days` or `month_day`) |
+| `JOIN_STYLE` | `transform` | Join keys: `transform` (`local.system.days()`) or `timestamp` (`created_at = created_at`) |
+| `SPJ_PARTIAL_CLUSTERED` | `true` | `spark.sql.sources.v2.bucketing.partiallyClusteredDistribution.enabled` |
+| `SPJ_PREFER_SORT_MERGE_JOIN` | `false` | `spark.sql.join.preferSortMergeJoin` |
+| `SKIP_ORDER_BY` | `false` | Omit `ORDER BY` from join query (plan analysis only) |
+
+The `local` catalog is a Hadoop-type catalog; table data and metadata live under `WAREHOUSE_DIR`.
+
+## Build only
+
+```bash
+mvn clean package
+```
+
+Shaded JAR: `target/test-iceberg-proj-1.0-SNAPSHOT.jar`
+
+## Using an existing Spark install
+
+Point `SPARK_HOME` at a Spark 4.1.x installation (Scala 2.13):
+
+```bash
+export SPARK_HOME=/path/to/spark-4.1.2-bin-hadoop3
+./scripts/run-three-spj-tests.sh
+```
+
+Ensure the Iceberg runtime matches your Spark minor version, e.g. `org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0`.

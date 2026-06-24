@@ -1,0 +1,205 @@
+Building application JAR...
+:: loading settings :: url = jar:file:/Users/irashid/tmp/test_iceberg_proj/.spark/spark-3.5.8-bin-hadoop3/jars/ivy-2.5.1.jar!/org/apache/ivy/core/settings/ivysettings.xml
+Ivy Default Cache set to: /Users/irashid/.ivy2/cache
+The jars for the packages stored in: /Users/irashid/.ivy2/jars
+org.apache.iceberg#iceberg-spark-runtime-3.5_2.12 added as a dependency
+:: resolving dependencies :: org.apache.spark#spark-submit-parent-0df95db5-708c-455b-aa27-5183d8d4840a;1.0
+	confs: [default]
+	found org.apache.iceberg#iceberg-spark-runtime-3.5_2.12;1.10.2 in local-m2-cache
+:: resolution report :: resolve 37ms :: artifacts dl 1ms
+	:: modules in use:
+	org.apache.iceberg#iceberg-spark-runtime-3.5_2.12;1.10.2 from local-m2-cache in [default]
+	---------------------------------------------------------------------
+	|                  |            modules            ||   artifacts   |
+	|       conf       | number| search|dwnlded|evicted|| number|dwnlded|
+	---------------------------------------------------------------------
+	|      default     |   1   |   0   |   0   |   0   ||   1   |   0   |
+	---------------------------------------------------------------------
+:: retrieving :: org.apache.spark#spark-submit-parent-0df95db5-708c-455b-aa27-5183d8d4840a
+	confs: [default]
+	0 artifacts copied, 1 already retrieved (0kB/2ms)
+Calendar range: 2026 only (Jan–Jun)
+Events table: local.db.events (partition evolution, 2024–2026)
+Partition strategy: days(created_at)
+SPJ partial clustered: true
+Prefer sort-merge join: false
+Inserted 181 calendar records (one per day from 2026-01-01 through 2026-06-30)
+Sample calendar rows:
++-------------------+
+|created_at         |
++-------------------+
+|2026-01-01 00:00:00|
+|2026-01-02 00:00:00|
+|2026-01-03 00:00:00|
+|2026-01-04 00:00:00|
+|2026-01-05 00:00:00|
++-------------------+
+only showing top 5 rows
+
+Partition spec (calendar):
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|createtab_stmt                                                                                                                                                                                                                                                                                                                         |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|CREATE TABLE local.db.calendar_days (\n  created_at TIMESTAMP)\nUSING iceberg\nPARTITIONED BY (days(created_at))\nLOCATION 'warehouse/db/calendar_days'\nTBLPROPERTIES (\n  'current-snapshot-id' = '6007512398971272120',\n  'format' = 'iceberg/parquet',\n  'format-version' = '2',\n  'write.parquet.compression-codec' = 'zstd')\n|
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+Partition spec (local.db.events):
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|createtab_stmt                                                                                                                                                                                                                                                                                                                                               |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|CREATE TABLE local.db.events (\n  id BIGINT,\n  event_type STRING,\n  created_at TIMESTAMP)\nUSING iceberg\nPARTITIONED BY (days(created_at))\nLOCATION 'warehouse/db/events'\nTBLPROPERTIES (\n  'current-snapshot-id' = '8591733419359522038',\n  'format' = 'iceberg/parquet',\n  'format-version' = '2',\n  'write.parquet.compression-codec' = 'zstd')\n|
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+Joined rows (no aggregation) from local.db.events:
+Join keys: created_at (timestamp equality)
+JOIN_STYLE: timestamp
+SKIP_ORDER_BY: true
+Join returned 6000 rows
+Storage Partitioned Join (SPJ) analysis:
+  Join operator: SortMergeJoin
+  SPJ used: NO
+  Reason: SortMergeJoin with pre-join shuffle Exchange on at least one side.
+  Left input has pre-join shuffle: true
+  Right input has pre-join shuffle: true
+Relevant physical plan excerpt:
+== Physical Plan ==
+AdaptiveSparkPlan (21)
++- == Final Plan ==
+   * Project (14)
+   +- * SortMergeJoin Inner (13)
+      :- * Sort (6)
+      :  +- AQEShuffleRead (5)
+      :     +- ShuffleQueryStage (4), Statistics(sizeInBytes=2.8 KiB, rowCount=181)
+      :        +- Exchange (3)
+      :           +- * ColumnarToRow (2)
+      :              +- BatchScan local.db.calendar_days (1)
+      +- * Sort (12)
+         +- AQEShuffleRead (11)
+            +- ShuffleQueryStage (10), Statistics(sizeInBytes=1171.9 KiB, rowCount=3.00E+4)
+               +- Exchange (9)
+                  +- * ColumnarToRow (8)
+                     +- BatchScan local.db.events (7)
++- == Initial Plan ==
+   Project (20)
+   +- SortMergeJoin Inner (19)
+      :- Sort (16)
+      :  +- Exchange (15)
+      :     +- BatchScan local.db.calendar_days (1)
+      +- Sort (18)
+         +- Exchange (17)
+            +- BatchScan local.db.events (7)
+
+
+(1) BatchScan local.db.calendar_days
+Output [1]: [created_at#64]
+local.db.calendar_days (branch=null) [filters=created_at IS NOT NULL, groupedBy=created_at_day]
+
+(2) ColumnarToRow [codegen id : 1]
+Input [1]: [created_at#64]
+
+(3) Exchange
+Input [1]: [created_at#64]
+Arguments: hashpartitioning(created_at#64, 200), ENSURE_REQUIREMENTS, [plan_id=533]
+
+(4) ShuffleQueryStage
+Output [1]: [created_at#64]
+Arguments: 0
+
+(5) AQEShuffleRead
+Input [1]: [created_at#64]
+Arguments: coalesced
+
+(6) Sort [codegen id : 3]
+Input [1]: [created_at#64]
+Arguments: [created_at#64 ASC NULLS FIRST], false, 0
+
+(7) BatchScan local.db.events
+Output [3]: [id#65L, event_type#66, created_at#67]
+local.db.events (branch=null) [filters=created_at IS NOT NULL, groupedBy=]
+
+(8) ColumnarToRow [codegen id : 2]
+Input [3]: [id#65L, event_type#66, created_at#67]
+
+(9) Exchange
+Input [3]: [id#65L, event_type#66, created_at#67]
+Arguments: hashpartitioning(created_at#67, 200), ENSURE_REQUIREMENTS, [plan_id=547]
+
+(10) ShuffleQueryStage
+Output [3]: [id#65L, event_type#66, created_at#67]
+Arguments: 1
+
+(11) AQEShuffleRead
+Input [3]: [id#65L, event_type#66, created_at#67]
+Arguments: coalesced
+
+(12) Sort [codegen id : 4]
+Input [3]: [id#65L, event_type#66, created_at#67]
+Arguments: [created_at#67 ASC NULLS FIRST], false, 0
+
+(13) SortMergeJoin [codegen id : 5]
+Left keys [1]: [created_at#64]
+Right keys [1]: [created_at#67]
+Join type: Inner
+Join condition: None
+
+(14) Project [codegen id : 5]
+Output [6]: [year(staticinvoke(class org.apache.iceberg.spark.functions.DaysFunction$TimestampToDaysFunction, DateType, invoke, created_at#64, TimestampType, false, true, true)) AS year#60, month(staticinvoke(class org.apache.iceberg.spark.functions.DaysFunction$TimestampToDaysFunction, DateType, invoke, created_at#64, TimestampType, false, true, true)) AS month#61, day(staticinvoke(class org.apache.iceberg.spark.functions.DaysFunction$TimestampToDaysFunction, DateType, invoke, created_at#64, TimestampType, false, true, true)) AS day#62, id#65L, event_type#66, created_at#67 AS event_at#63]
+Input [4]: [created_at#64, id#65L, event_type#66, created_at#67]
+
+(15) Exchange
+Input [1]: [created_at#64]
+Arguments: hashpartitioning(created_at#64, 200), ENSURE_REQUIREMENTS, [plan_id=521]
+
+(16) Sort
+Input [1]: [created_at#64]
+Arguments: [created_at#64 ASC NULLS FIRST], false, 0
+
+(17) Exchange
+Input [3]: [id#65L, event_type#66, created_at#67]
+Arguments: hashpartitioning(created_at#67, 200), ENSURE_REQUIREMENTS, [plan_id=520]
+
+(18) Sort
+Input [3]: [id#65L, event_type#66, created_at#67]
+Arguments: [created_at#67 ASC NULLS FIRST], false, 0
+
+(19) SortMergeJoin
+Left keys [1]: [created_at#64]
+Right keys [1]: [created_at#67]
+Join type: Inner
+Join condition: None
+
+(20) Project
+Output [6]: [year(staticinvoke(class org.apache.iceberg.spark.functions.DaysFunction$TimestampToDaysFunction, DateType, invoke, created_at#64, TimestampType, false, true, true)) AS year#60, month(staticinvoke(class org.apache.iceberg.spark.functions.DaysFunction$TimestampToDaysFunction, DateType, invoke, created_at#64, TimestampType, false, true, true)) AS month#61, day(staticinvoke(class org.apache.iceberg.spark.functions.DaysFunction$TimestampToDaysFunction, DateType, invoke, created_at#64, TimestampType, false, true, true)) AS day#62, id#65L, event_type#66, created_at#67 AS event_at#63]
+Input [4]: [created_at#64, id#65L, event_type#66, created_at#67]
+
+(21) AdaptiveSparkPlan
+Output [6]: [year#60, month#61, day#62, id#65L, event_type#66, event_at#63]
+Arguments: isFinalPlan=true
+
+
++----+-----+---+----------+----------+-------------------+
+|year|month|day|id        |event_type|event_at           |
++----+-----+---+----------+----------+-------------------+
+|2026|1    |1  |2026010000|click     |2026-01-01 00:00:00|
+|2026|1    |1  |2026010001|view      |2026-01-01 00:00:00|
+|2026|1    |1  |2026010002|purchase  |2026-01-01 00:00:00|
+|2026|1    |1  |2026010003|click     |2026-01-01 00:00:00|
+|2026|1    |1  |2026010004|view      |2026-01-01 00:00:00|
+|2026|1    |1  |2026010005|purchase  |2026-01-01 00:00:00|
+|2026|1    |1  |2026010006|click     |2026-01-01 00:00:00|
+|2026|1    |1  |2026010007|view      |2026-01-01 00:00:00|
+|2026|1    |1  |2026010008|purchase  |2026-01-01 00:00:00|
+|2026|1    |1  |2026010009|click     |2026-01-01 00:00:00|
+|2026|1    |1  |2026010010|view      |2026-01-01 00:00:00|
+|2026|1    |1  |2026010011|purchase  |2026-01-01 00:00:00|
+|2026|1    |1  |2026010012|click     |2026-01-01 00:00:00|
+|2026|1    |1  |2026010013|view      |2026-01-01 00:00:00|
+|2026|1    |1  |2026010014|purchase  |2026-01-01 00:00:00|
+|2026|1    |1  |2026010015|click     |2026-01-01 00:00:00|
+|2026|1    |1  |2026010016|view      |2026-01-01 00:00:00|
+|2026|1    |1  |2026010017|purchase  |2026-01-01 00:00:00|
+|2026|1    |1  |2026010018|click     |2026-01-01 00:00:00|
+|2026|1    |1  |2026010019|view      |2026-01-01 00:00:00|
++----+-----+---+----------+----------+-------------------+
+only showing top 20 rows
+

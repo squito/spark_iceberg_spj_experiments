@@ -1,0 +1,36 @@
+=== test1-events_2026-2026 ===
+Spark 4.1.2, Iceberg 1.11.0
+Calendar range: 2026 only (Jan–Jun)
+Events table: local.db.events_2026 (2026 only, uniform partitioning)
+Join returned 6000 rows
+  SPJ used: YES
+  Reason: No shuffle Exchange nodes appear before the join; data was read co-partitioned.
+  Left input has pre-join shuffle: false
+  Right input has pre-join shuffle: false
+IcebergScan(table=local.db.calendar_days, schemaId=0, snapshotId=1766703255054785290, branch=null, filters=created_at IS NOT NULL, runtimeFilters=, groupedBy=created_at_day)
+IcebergScan(table=local.db.events_2026, schemaId=0, snapshotId=3190354437712384357, branch=null, filters=created_at IS NOT NULL, runtimeFilters=, groupedBy=created_at_day)
+
+=== test2-events-2026 ===
+Spark 4.1.2, Iceberg 1.11.0
+Calendar range: 2026 only (Jan–Jun)
+Events table: local.db.events (partition evolution, 2024–2026)
+Join returned 6000 rows
+  SPJ used: NO
+  Reason: SortMergeJoin with pre-join shuffle Exchange on at least one side.
+  Left input has pre-join shuffle: true
+  Right input has pre-join shuffle: true
+IcebergScan(table=local.db.calendar_days, schemaId=0, snapshotId=641961971047038270, branch=null, filters=created_at IS NOT NULL, runtimeFilters=, groupedBy=created_at_day)
+IcebergScan(table=local.db.events, schemaId=0, snapshotId=2646295185786867733, branch=null, filters=created_at IS NOT NULL, runtimeFilters=, groupedBy=)
+
+=== test3-events-full ===
+Spark 4.1.2, Iceberg 1.11.0
+Calendar range: full range (2024-01-01 through 2026-06-30; mixed event partition specs)
+Events table: local.db.events (partition evolution, 2024–2026)
+Join returned 30000 rows
+  SPJ used: NO
+  Reason: SortMergeJoin with pre-join shuffle Exchange on at least one side.
+  Left input has pre-join shuffle: true
+  Right input has pre-join shuffle: true
+IcebergScan(table=local.db.calendar_days, schemaId=0, snapshotId=151552146761410004, branch=null, filters=created_at IS NOT NULL, runtimeFilters=, groupedBy=created_at_day)
+IcebergScan(table=local.db.events, schemaId=0, snapshotId=2646295185786867733, branch=null, filters=created_at IS NOT NULL, runtimeFilters=, groupedBy=)
+

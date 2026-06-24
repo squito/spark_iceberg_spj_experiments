@@ -1,0 +1,16 @@
+target/
+.spark/
+warehouse/
+metastore_db/
+logs/
+demo-output.txt
+.idea/
+.vscode/
+*.iml
+.classpath
+.project
+.settings/
+.metals/
+.bloop/
+.DS_Store
+*.log

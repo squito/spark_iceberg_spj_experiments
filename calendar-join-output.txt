@@ -1,0 +1,349 @@
+Building application JAR...
+:: loading settings :: url = jar:file:/Users/irashid/tmp/test_iceberg_proj/.spark/spark-3.5.8-bin-hadoop3/jars/ivy-2.5.1.jar!/org/apache/ivy/core/settings/ivysettings.xml
+Ivy Default Cache set to: /Users/irashid/.ivy2/cache
+The jars for the packages stored in: /Users/irashid/.ivy2/jars
+org.apache.iceberg#iceberg-spark-runtime-3.5_2.12 added as a dependency
+:: resolving dependencies :: org.apache.spark#spark-submit-parent-b3f5738a-c656-4b7f-99d4-dc798e4c0205;1.0
+	confs: [default]
+	found org.apache.iceberg#iceberg-spark-runtime-3.5_2.12;1.10.2 in local-m2-cache
+:: resolution report :: resolve 36ms :: artifacts dl 1ms
+	:: modules in use:
+	org.apache.iceberg#iceberg-spark-runtime-3.5_2.12;1.10.2 from local-m2-cache in [default]
+	---------------------------------------------------------------------
+	|                  |            modules            ||   artifacts   |
+	|       conf       | number| search|dwnlded|evicted|| number|dwnlded|
+	---------------------------------------------------------------------
+	|      default     |   1   |   0   |   0   |   0   ||   1   |   0   |
+	---------------------------------------------------------------------
+:: retrieving :: org.apache.spark#spark-submit-parent-b3f5738a-c656-4b7f-99d4-dc798e4c0205
+	confs: [default]
+	0 artifacts copied, 1 already retrieved (0kB/2ms)
+Inserted 912 calendar records (one per day from 2024-01-01 through 2026-06-30)
+Sample calendar rows:
++-------------------+----+-----+---+
+|created_at         |year|month|day|
++-------------------+----+-----+---+
+|2024-01-01 00:00:00|2024|1    |1  |
+|2024-01-02 00:00:00|2024|1    |2  |
+|2024-01-03 00:00:00|2024|1    |3  |
+|2024-01-04 00:00:00|2024|1    |4  |
+|2024-01-05 00:00:00|2024|1    |5  |
++-------------------+----+-----+---+
+only showing top 5 rows
+
+Partition spec:
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|createtab_stmt                                                                                                                                                                                                                                                                                                                                                                                                     |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|CREATE TABLE local.db.calendar_days (\n  created_at TIMESTAMP,\n  year INT,\n  month INT,\n  day INT)\nUSING iceberg\nPARTITIONED BY (year, month, day)\nLOCATION '/Users/irashid/tmp/test_iceberg_proj/warehouse/db/calendar_days'\nTBLPROPERTIES (\n  'current-snapshot-id' = '6192536911968307974',\n  'format' = 'iceberg/parquet',\n  'format-version' = '2',\n  'write.parquet.compression-codec' = 'zstd')\n|
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+Event counts per calendar day (joined on year, month, day):
+Storage Partitioned Join (SPJ) analysis:
+  Join operator: Unknown
+  SPJ used: NO
+  Reason: No join operator found in the executed physical plan.
+Relevant physical plan excerpt:
+== Physical Plan ==
+AdaptiveSparkPlan (36)
++- == Final Plan ==
+   TableCacheQueryStage (35), Statistics(sizeInBytes=16.4 KiB, rowCount=840)
+   +- InMemoryTableScan (1)
+         +- InMemoryRelation (2)
+               +- AdaptiveSparkPlan (34)
+               +- == Final Plan ==
+                  * Sort (22)
+                  +- ShuffleQueryStage (21), Statistics(sizeInBytes=32.8 KiB, rowCount=840)
+                     +- Exchange (20)
+                        +- * HashAggregate (19)
+                           +- * HashAggregate (18)
+                              +- * Project (17)
+                                 +- * SortMergeJoin Inner (16)
+                                    :- * Sort (8)
+                                    :  +- AQEShuffleRead (7)
+                                    :     +- ShuffleQueryStage (6), Statistics(sizeInBytes=28.5 KiB, rowCount=912)
+                                    :        +- Exchange (5)
+                                    :           +- * ColumnarToRow (4)
+                                    :              +- BatchScan local.db.calendar_days (3)
+                                    +- * Sort (15)
+                                       +- AQEShuffleRead (14)
+                                          +- ShuffleQueryStage (13), Statistics(sizeInBytes=703.1 KiB, rowCount=3.00E+4)
+                                             +- Exchange (12)
+                                                +- * Filter (11)
+                                                   +- * ColumnarToRow (10)
+                                                      +- BatchScan local.db.events (9)
+               +- == Initial Plan ==
+                  Sort (33)
+                  +- Exchange (32)
+                     +- HashAggregate (31)
+                        +- HashAggregate (30)
+                           +- Project (29)
+                              +- SortMergeJoin Inner (28)
+                                 :- Sort (24)
+                                 :  +- Exchange (23)
+                                 :     +- BatchScan local.db.calendar_days (3)
+                                 +- Sort (27)
+                                    +- Exchange (26)
+                                       +- Filter (25)
+                                          +- BatchScan local.db.events (9)
++- == Initial Plan ==
+   InMemoryTableScan (1)
+      +- InMemoryRelation (2)
+            +- AdaptiveSparkPlan (34)
+            +- == Final Plan ==
+               * Sort (22)
+               +- ShuffleQueryStage (21), Statistics(sizeInBytes=32.8 KiB, rowCount=840)
+                  +- Exchange (20)
+                     +- * HashAggregate (19)
+                        +- * HashAggregate (18)
+                           +- * Project (17)
+                              +- * SortMergeJoin Inner (16)
+                                 :- * Sort (8)
+                                 :  +- AQEShuffleRead (7)
+                                 :     +- ShuffleQueryStage (6), Statistics(sizeInBytes=28.5 KiB, rowCount=912)
+                                 :        +- Exchange (5)
+                                 :           +- * ColumnarToRow (4)
+                                 :              +- BatchScan local.db.calendar_days (3)
+                                 +- * Sort (15)
+                                    +- AQEShuffleRead (14)
+                                       +- ShuffleQueryStage (13), Statistics(sizeInBytes=703.1 KiB, rowCount=3.00E+4)
+                                          +- Exchange (12)
+                                             +- * Filter (11)
+                                                +- * ColumnarToRow (10)
+                                                   +- BatchScan local.db.events (9)
+            +- == Initial Plan ==
+               Sort (33)
+               +- Exchange (32)
+                  +- HashAggregate (31)
+                     +- HashAggregate (30)
+                        +- Project (29)
+                           +- SortMergeJoin Inner (28)
+                              :- Sort (24)
+                              :  +- Exchange (23)
+                              :     +- BatchScan local.db.calendar_days (3)
+                              +- Sort (27)
+                                 +- Exchange (26)
+                                    +- Filter (25)
+                                       +- BatchScan local.db.events (9)
+
+
+(1) InMemoryTableScan
+Output [4]: [year#313, month#314, day#315, event_count#311L]
+Arguments: [year#313, month#314, day#315, event_count#311L]
+
+(2) InMemoryRelation
+Arguments: [year#313, month#314, day#315, event_count#311L], CachedRDDBuilder(org.apache.spark.sql.execution.columnar.DefaultCachedBatchSerializer@5f9f5487,StorageLevel(disk, memory, deserialized, 1 replicas),AdaptiveSparkPlan isFinalPlan=true
++- == Final Plan ==
+   *(6) Sort [year#313 ASC NULLS FIRST, month#314 ASC NULLS FIRST, day#315 ASC NULLS FIRST], true, 0
+   +- ShuffleQueryStage 2
+      +- Exchange rangepartitioning(year#313 ASC NULLS FIRST, month#314 ASC NULLS FIRST, day#315 ASC NULLS FIRST, 200), ENSURE_REQUIREMENTS, [plan_id=1515]
+         +- *(5) HashAggregate(keys=[year#313, month#314, day#315], functions=[count(id#316L)], output=[year#313, month#314, day#315, event_count#311L])
+            +- *(5) HashAggregate(keys=[year#313, month#314, day#315], functions=[partial_count(id#316L)], output=[year#313, month#314, day#315, count#344L])
+               +- *(5) Project [year#313, month#314, day#315, id#316L]
+                  +- *(5) SortMergeJoin [year#313, month#314, day#315], [year(cast(created_at#318 as date)), month(cast(created_at#318 as date)), day(cast(created_at#318 as date))], Inner
+                     :- *(3) Sort [year#313 ASC NULLS FIRST, month#314 ASC NULLS FIRST, day#315 ASC NULLS FIRST], false, 0
+                     :  +- AQEShuffleRead coalesced
+                     :     +- ShuffleQueryStage 0
+                     :        +- Exchange hashpartitioning(year#313, month#314, day#315, 200), ENSURE_REQUIREMENTS, [plan_id=1396]
+                     :           +- *(1) ColumnarToRow
+                     :              +- BatchScan local.db.calendar_days[year#313, month#314, day#315] local.db.calendar_days (branch=null) [filters=year IS NOT NULL, month IS NOT NULL, day IS NOT NULL, groupedBy=year, month, day] RuntimeFilters: []
+                     +- *(4) Sort [year(cast(created_at#318 as date)) ASC NULLS FIRST, month(cast(created_at#318 as date)) ASC NULLS FIRST, day(cast(created_at#318 as date)) ASC NULLS FIRST], false, 0
+                        +- AQEShuffleRead coalesced
+                           +- ShuffleQueryStage 1
+                              +- Exchange hashpartitioning(year(cast(created_at#318 as date)), month(cast(created_at#318 as date)), day(cast(created_at#318 as date)), 200), ENSURE_REQUIREMENTS, [plan_id=1410]
+                                 +- *(2) Filter isnotnull(created_at#318)
+                                    +- *(2) ColumnarToRow
+                                       +- BatchScan local.db.events[id#316L, created_at#318] local.db.events (branch=null) [filters=created_at IS NOT NULL, groupedBy=created_at_month] RuntimeFilters: []
++- == Initial Plan ==
+   Sort [year#313 ASC NULLS FIRST, month#314 ASC NULLS FIRST, day#315 ASC NULLS FIRST], true, 0
+   +- Exchange rangepartitioning(year#313 ASC NULLS FIRST, month#314 ASC NULLS FIRST, day#315 ASC NULLS FIRST, 200), ENSURE_REQUIREMENTS, [plan_id=1348]
+      +- HashAggregate(keys=[year#313, month#314, day#315], functions=[count(id#316L)], output=[year#313, month#314, day#315, event_count#311L])
+         +- HashAggregate(keys=[year#313, month#314, day#315], functions=[partial_count(id#316L)], output=[year#313, month#314, day#315, count#344L])
+            +- Project [year#313, month#314, day#315, id#316L]
+               +- SortMergeJoin [year#313, month#314, day#315], [year(cast(created_at#318 as date)), month(cast(created_at#318 as date)), day(cast(created_at#318 as date))], Inner
+                  :- Sort [year#313 ASC NULLS FIRST, month#314 ASC NULLS FIRST, day#315 ASC NULLS FIRST], false, 0
+                  :  +- Exchange hashpartitioning(year#313, month#314, day#315, 200), ENSURE_REQUIREMENTS, [plan_id=1340]
+                  :     +- BatchScan local.db.calendar_days[year#313, month#314, day#315] local.db.calendar_days (branch=null) [filters=year IS NOT NULL, month IS NOT NULL, day IS NOT NULL, groupedBy=year, month, day] RuntimeFilters: []
+                  +- Sort [year(cast(created_at#318 as date)) ASC NULLS FIRST, month(cast(created_at#318 as date)) ASC NULLS FIRST, day(cast(created_at#318 as date)) ASC NULLS FIRST], false, 0
+                     +- Exchange hashpartitioning(year(cast(created_at#318 as date)), month(cast(created_at#318 as date)), day(cast(created_at#318 as date)), 200), ENSURE_REQUIREMENTS, [plan_id=1339]
+                        +- Filter isnotnull(created_at#318)
+                           +- BatchScan local.db.events[id#316L, created_at#318] local.db.events (branch=null) [filters=created_at IS NOT NULL, groupedBy=created_at_month] RuntimeFilters: []
+,None), [year#313 ASC NULLS FIRST, month#314 ASC NULLS FIRST, day#315 ASC NULLS FIRST]
+
+(3) BatchScan local.db.calendar_days
+Output [3]: [year#313, month#314, day#315]
+local.db.calendar_days (branch=null) [filters=year IS NOT NULL, month IS NOT NULL, day IS NOT NULL, groupedBy=year, month, day]
+
+(4) ColumnarToRow [codegen id : 1]
+Input [3]: [year#313, month#314, day#315]
+
+(5) Exchange
+Input [3]: [year#313, month#314, day#315]
+Arguments: hashpartitioning(year#313, month#314, day#315, 200), ENSURE_REQUIREMENTS, [plan_id=1396]
+
+(6) ShuffleQueryStage
+Output [3]: [year#313, month#314, day#315]
+Arguments: 0
+
+(7) AQEShuffleRead
+Input [3]: [year#313, month#314, day#315]
+Arguments: coalesced
+
+(8) Sort [codegen id : 3]
+Input [3]: [year#313, month#314, day#315]
+Arguments: [year#313 ASC NULLS FIRST, month#314 ASC NULLS FIRST, day#315 ASC NULLS FIRST], false, 0
+
+(9) BatchScan local.db.events
+Output [2]: [id#316L, created_at#318]
+local.db.events (branch=null) [filters=created_at IS NOT NULL, groupedBy=created_at_month]
+
+(10) ColumnarToRow [codegen id : 2]
+Input [2]: [id#316L, created_at#318]
+
+(11) Filter [codegen id : 2]
+Input [2]: [id#316L, created_at#318]
+Condition : isnotnull(created_at#318)
+
+(12) Exchange
+Input [2]: [id#316L, created_at#318]
+Arguments: hashpartitioning(year(cast(created_at#318 as date)), month(cast(created_at#318 as date)), day(cast(created_at#318 as date)), 200), ENSURE_REQUIREMENTS, [plan_id=1410]
+
+(13) ShuffleQueryStage
+Output [2]: [id#316L, created_at#318]
+Arguments: 1
+
+(14) AQEShuffleRead
+Input [2]: [id#316L, created_at#318]
+Arguments: coalesced
+
+(15) Sort [codegen id : 4]
+Input [2]: [id#316L, created_at#318]
+Arguments: [year(cast(created_at#318 as date)) ASC NULLS FIRST, month(cast(created_at#318 as date)) ASC NULLS FIRST, day(cast(created_at#318 as date)) ASC NULLS FIRST], false, 0
+
+(16) SortMergeJoin [codegen id : 5]
+Left keys [3]: [year#313, month#314, day#315]
+Right keys [3]: [year(cast(created_at#318 as date)), month(cast(created_at#318 as date)), day(cast(created_at#318 as date))]
+Join type: Inner
+Join condition: None
+
+(17) Project [codegen id : 5]
+Output [4]: [year#313, month#314, day#315, id#316L]
+Input [5]: [year#313, month#314, day#315, id#316L, created_at#318]
+
+(18) HashAggregate [codegen id : 5]
+Input [4]: [year#313, month#314, day#315, id#316L]
+Keys [3]: [year#313, month#314, day#315]
+Functions [1]: [partial_count(id#316L)]
+Aggregate Attributes [1]: [count#343L]
+Results [4]: [year#313, month#314, day#315, count#344L]
+
+(19) HashAggregate [codegen id : 5]
+Input [4]: [year#313, month#314, day#315, count#344L]
+Keys [3]: [year#313, month#314, day#315]
+Functions [1]: [count(id#316L)]
+Aggregate Attributes [1]: [count(id#316L)#333L]
+Results [4]: [year#313, month#314, day#315, count(id#316L)#333L AS event_count#311L]
+
+(20) Exchange
+Input [4]: [year#313, month#314, day#315, event_count#311L]
+Arguments: rangepartitioning(year#313 ASC NULLS FIRST, month#314 ASC NULLS FIRST, day#315 ASC NULLS FIRST, 200), ENSURE_REQUIREMENTS, [plan_id=1515]
+
+(21) ShuffleQueryStage
+Output [4]: [year#313, month#314, day#315, event_count#311L]
+Arguments: 2
+
+(22) Sort [codegen id : 6]
+Input [4]: [year#313, month#314, day#315, event_count#311L]
+Arguments: [year#313 ASC NULLS FIRST, month#314 ASC NULLS FIRST, day#315 ASC NULLS FIRST], true, 0
+
+(23) Exchange
+Input [3]: [year#313, month#314, day#315]
+Arguments: hashpartitioning(year#313, month#314, day#315, 200), ENSURE_REQUIREMENTS, [plan_id=1340]
+
+(24) Sort
+Input [3]: [year#313, month#314, day#315]
+Arguments: [year#313 ASC NULLS FIRST, month#314 ASC NULLS FIRST, day#315 ASC NULLS FIRST], false, 0
+
+(25) Filter
+Input [2]: [id#316L, created_at#318]
+Condition : isnotnull(created_at#318)
+
+(26) Exchange
+Input [2]: [id#316L, created_at#318]
+Arguments: hashpartitioning(year(cast(created_at#318 as date)), month(cast(created_at#318 as date)), day(cast(created_at#318 as date)), 200), ENSURE_REQUIREMENTS, [plan_id=1339]
+
+(27) Sort
+Input [2]: [id#316L, created_at#318]
+Arguments: [year(cast(created_at#318 as date)) ASC NULLS FIRST, month(cast(created_at#318 as date)) ASC NULLS FIRST, day(cast(created_at#318 as date)) ASC NULLS FIRST], false, 0
+
+(28) SortMergeJoin
+Left keys [3]: [year#313, month#314, day#315]
+Right keys [3]: [year(cast(created_at#318 as date)), month(cast(created_at#318 as date)), day(cast(created_at#318 as date))]
+Join type: Inner
+Join condition: None
+
+(29) Project
+Output [4]: [year#313, month#314, day#315, id#316L]
+Input [5]: [year#313, month#314, day#315, id#316L, created_at#318]
+
+(30) HashAggregate
+Input [4]: [year#313, month#314, day#315, id#316L]
+Keys [3]: [year#313, month#314, day#315]
+Functions [1]: [partial_count(id#316L)]
+Aggregate Attributes [1]: [count#343L]
+Results [4]: [year#313, month#314, day#315, count#344L]
+
+(31) HashAggregate
+Input [4]: [year#313, month#314, day#315, count#344L]
+Keys [3]: [year#313, month#314, day#315]
+Functions [1]: [count(id#316L)]
+Aggregate Attributes [1]: [count(id#316L)#333L]
+Results [4]: [year#313, month#314, day#315, count(id#316L)#333L AS event_count#311L]
+
+(32) Exchange
+Input [4]: [year#313, month#314, day#315, event_count#311L]
+Arguments: rangepartitioning(year#313 ASC NULLS FIRST, month#314 ASC NULLS FIRST, day#315 ASC NULLS FIRST, 200), ENSURE_REQUIREMENTS, [plan_id=1348]
+
+(33) Sort
+Input [4]: [year#313, month#314, day#315, event_count#311L]
+Arguments: [year#313 ASC NULLS FIRST, month#314 ASC NULLS FIRST, day#315 ASC NULLS FIRST], true, 0
+
+(34) AdaptiveSparkPlan
+Output [4]: [year#313, month#314, day#315, event_count#311L]
+Arguments: isFinalPlan=true
+
+(35) TableCacheQueryStage
+Output [4]: [year#313, month#314, day#315, event_count#311L]
+Arguments: 0
+
+(36) AdaptiveSparkPlan
+Output [4]: [year#313, month#314, day#315, event_count#311L]
+Arguments: isFinalPlan=true
+
+
++----+-----+---+-----------+
+|year|month|day|event_count|
++----+-----+---+-----------+
+|2024|1    |1  |36         |
+|2024|1    |2  |36         |
+|2024|1    |3  |36         |
+|2024|1    |4  |35         |
+|2024|1    |5  |36         |
+|2024|1    |6  |36         |
+|2024|1    |7  |35         |
+|2024|1    |8  |36         |
+|2024|1    |9  |36         |
+|2024|1    |10 |36         |
+|2024|1    |11 |35         |
+|2024|1    |12 |36         |
+|2024|1    |13 |36         |
+|2024|1    |14 |35         |
+|2024|1    |15 |36         |
+|2024|1    |16 |36         |
+|2024|1    |17 |36         |
+|2024|1    |18 |35         |
+|2024|1    |19 |36         |
+|2024|1    |20 |36         |
++----+-----+---+-----------+
+only showing top 20 rows
+

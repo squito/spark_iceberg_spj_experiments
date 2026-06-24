@@ -1,0 +1,75 @@
+:: loading settings :: url = jar:file:/Users/irashid/tmp/test_iceberg_proj/.spark/spark-3.5.8-bin-hadoop3/jars/ivy-2.5.1.jar!/org/apache/ivy/core/settings/ivysettings.xml
+Ivy Default Cache set to: /Users/irashid/.ivy2/cache
+The jars for the packages stored in: /Users/irashid/.ivy2/jars
+org.apache.iceberg#iceberg-spark-runtime-3.5_2.12 added as a dependency
+:: resolving dependencies :: org.apache.spark#spark-submit-parent-54c4a0b7-7c0d-499c-b0d3-23191af00ee9;1.0
+	confs: [default]
+	found org.apache.iceberg#iceberg-spark-runtime-3.5_2.12;1.10.2 in local-m2-cache
+:: resolution report :: resolve 45ms :: artifacts dl 1ms
+	:: modules in use:
+	org.apache.iceberg#iceberg-spark-runtime-3.5_2.12;1.10.2 from local-m2-cache in [default]
+	---------------------------------------------------------------------
+	|                  |            modules            ||   artifacts   |
+	|       conf       | number| search|dwnlded|evicted|| number|dwnlded|
+	---------------------------------------------------------------------
+	|      default     |   1   |   0   |   0   |   0   ||   1   |   0   |
+	---------------------------------------------------------------------
+:: retrieving :: org.apache.spark#spark-submit-parent-54c4a0b7-7c0d-499c-b0d3-23191af00ee9
+	confs: [default]
+	0 artifacts copied, 1 already retrieved (0kB/2ms)
+Spark Web UI available at http://192.168.86.44:4040
+Spark master: local[*], Application Id: local-1782160077713
+spark-sql (default)> spark.sql.sources.v2.bucketing.enabled	true
+Time taken: 0.27 seconds, Fetched 1 row(s)
+spark-sql (default)> 
+[INVALID_SET_SYNTAX] Expected format is 'SET', 'SET key', or 'SET key=value'. If you want to include special characters in key, or include semicolon in value, please use backquotes, e.g., SET `key`=`value`.(line 1, pos 0)
+
+== SQL ==
+SET spark.sql.iceberg.planning.preserve-data-grouping=true
+^^^
+
+spark-sql (default)> spark.sql.sources.v2.bucketing.pushPartValues.enabled	true
+Time taken: 0.007 seconds, Fetched 1 row(s)
+spark-sql (default)> spark.sql.requireAllClusterKeysForCoPartition	false
+Time taken: 0.007 seconds, Fetched 1 row(s)
+spark-sql (default)>                    >                    >                    >                    >                    > == Parsed Logical Plan ==
+'Aggregate ['c.year, 'c.month, 'c.day], ['c.year, 'c.month, 'c.day, unresolvedalias('count('e.id), None)]
++- 'Join Inner, ((('year('e.created_at) = 'c.year) AND ('month('e.created_at) = 'c.month)) AND ('day('e.created_at) = 'c.day))
+   :- 'SubqueryAlias c
+   :  +- 'UnresolvedRelation [local, db, calendar_days], [], false
+   +- 'SubqueryAlias e
+      +- 'UnresolvedRelation [local, db, events], [], false
+
+== Analyzed Logical Plan ==
+year: int, month: int, day: int, count(id): bigint
+Aggregate [year#36, month#37, day#38], [year#36, month#37, day#38, count(id#39L) AS count(id)#57L]
++- Join Inner, (((year(cast(created_at#41 as date)) = year#36) AND (month(cast(created_at#41 as date)) = month#37)) AND (day(cast(created_at#41 as date)) = day#38))
+   :- SubqueryAlias c
+   :  +- SubqueryAlias local.db.calendar_days
+   :     +- RelationV2[created_at#35, year#36, month#37, day#38] local.db.calendar_days local.db.calendar_days
+   +- SubqueryAlias e
+      +- SubqueryAlias local.db.events
+         +- RelationV2[id#39L, event_type#40, created_at#41] local.db.events local.db.events
+
+== Optimized Logical Plan ==
+Aggregate [year#36, month#37, day#38], [year#36, month#37, day#38, count(id#39L) AS count(id)#57L]
++- Project [year#36, month#37, day#38, id#39L]
+   +- Join Inner, (((year(cast(created_at#41 as date)) = year#36) AND (month(cast(created_at#41 as date)) = month#37)) AND (day(cast(created_at#41 as date)) = day#38))
+      :- RelationV2[year#36, month#37, day#38] local.db.calendar_days
+      +- Filter isnotnull(created_at#41)
+         +- RelationV2[id#39L, created_at#41] local.db.events
+
+== Physical Plan ==
+AdaptiveSparkPlan isFinalPlan=false
++- HashAggregate(keys=[year#36, month#37, day#38], functions=[count(id#39L)], output=[year#36, month#37, day#38, count(id)#57L])
+   +- Exchange hashpartitioning(year#36, month#37, day#38, 200), ENSURE_REQUIREMENTS, [plan_id=57]
+      +- HashAggregate(keys=[year#36, month#37, day#38], functions=[partial_count(id#39L)], output=[year#36, month#37, day#38, count#64L])
+         +- Project [year#36, month#37, day#38, id#39L]
+            +- BroadcastHashJoin [year#36, month#37, day#38], [year(cast(created_at#41 as date)), month(cast(created_at#41 as date)), day(cast(created_at#41 as date))], Inner, BuildLeft, false
+               :- BroadcastExchange HashedRelationBroadcastMode(List(input[0, int, true], input[1, int, true], input[2, int, true]),false), [plan_id=52]
+               :  +- BatchScan local.db.calendar_days[year#36, month#37, day#38] local.db.calendar_days (branch=null) [filters=year IS NOT NULL, month IS NOT NULL, day IS NOT NULL, groupedBy=] RuntimeFilters: []
+               +- Filter isnotnull(created_at#41)
+                  +- BatchScan local.db.events[id#39L, created_at#41] local.db.events (branch=null) [filters=created_at IS NOT NULL, groupedBy=] RuntimeFilters: []
+
+Time taken: 0.753 seconds, Fetched 1 row(s)
+spark-sql (default)> 

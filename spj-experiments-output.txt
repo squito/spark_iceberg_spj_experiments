@@ -1,0 +1,70 @@
+================================================================
+Experiment: month_day + partialClustered=true
+  PARTITION_STRATEGY=month_day
+  SPJ_PARTIAL_CLUSTERED=true
+  SPJ_PREFER_SORT_MERGE_JOIN=false
+================================================================
+Join operator:   Join operator: SortMergeJoin
+SPJ used:   SPJ used: NO
+Reason:   Reason: SortMergeJoin with pre-join shuffle Exchange on at least one side.
+Left shuffle:   Left input has pre-join shuffle: true
+Right shuffle:   Right input has pre-join shuffle: true
+Calendar groupedBy: n/a
+Events groupedBy: n/a
+
+================================================================
+Experiment: month_day + partialClustered=false
+  PARTITION_STRATEGY=month_day
+  SPJ_PARTIAL_CLUSTERED=false
+  SPJ_PREFER_SORT_MERGE_JOIN=false
+================================================================
+Join operator:   Join operator: SortMergeJoin
+SPJ used:   SPJ used: NO
+Reason:   Reason: SortMergeJoin with pre-join shuffle Exchange on at least one side.
+Left shuffle:   Left input has pre-join shuffle: true
+Right shuffle:   Right input has pre-join shuffle: true
+Calendar groupedBy: n/a
+Events groupedBy: n/a
+
+================================================================
+Experiment: days-only + partialClustered=true
+  PARTITION_STRATEGY=days
+  SPJ_PARTIAL_CLUSTERED=true
+  SPJ_PREFER_SORT_MERGE_JOIN=false
+================================================================
+Join operator:   Join operator: SortMergeJoin
+SPJ used:   SPJ used: NO
+Reason:   Reason: SortMergeJoin with pre-join shuffle Exchange on at least one side.
+Left shuffle:   Left input has pre-join shuffle: true
+Right shuffle:   Right input has pre-join shuffle: true
+Calendar groupedBy: n/a
+Events groupedBy: n/a
+
+================================================================
+Experiment: days-only + partialClustered=false
+  PARTITION_STRATEGY=days
+  SPJ_PARTIAL_CLUSTERED=false
+  SPJ_PREFER_SORT_MERGE_JOIN=false
+================================================================
+Join operator:   Join operator: SortMergeJoin
+SPJ used:   SPJ used: NO
+Reason:   Reason: SortMergeJoin with pre-join shuffle Exchange on at least one side.
+Left shuffle:   Left input has pre-join shuffle: true
+Right shuffle:   Right input has pre-join shuffle: true
+Calendar groupedBy: n/a
+Events groupedBy: n/a
+
+================================================================
+Experiment: days-only + partialClustered=true + preferSMJ=true
+  PARTITION_STRATEGY=days
+  SPJ_PARTIAL_CLUSTERED=true
+  SPJ_PREFER_SORT_MERGE_JOIN=true
+================================================================
+Join operator:   Join operator: SortMergeJoin
+SPJ used:   SPJ used: NO
+Reason:   Reason: SortMergeJoin with pre-join shuffle Exchange on at least one side.
+Left shuffle:   Left input has pre-join shuffle: true
+Right shuffle:   Right input has pre-join shuffle: true
+Calendar groupedBy: n/a
+Events groupedBy: n/a
+

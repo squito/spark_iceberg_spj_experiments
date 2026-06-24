@@ -1,0 +1,159 @@
+Building application JAR...
+:: loading settings :: url = jar:file:/Users/irashid/tmp/test_iceberg_proj/.spark/spark-3.5.8-bin-hadoop3/jars/ivy-2.5.1.jar!/org/apache/ivy/core/settings/ivysettings.xml
+Ivy Default Cache set to: /Users/irashid/.ivy2/cache
+The jars for the packages stored in: /Users/irashid/.ivy2/jars
+org.apache.iceberg#iceberg-spark-runtime-3.5_2.12 added as a dependency
+:: resolving dependencies :: org.apache.spark#spark-submit-parent-f3828301-6fa9-40ef-a62b-90a980afd228;1.0
+	confs: [default]
+	found org.apache.iceberg#iceberg-spark-runtime-3.5_2.12;1.10.2 in local-m2-cache
+:: resolution report :: resolve 36ms :: artifacts dl 1ms
+	:: modules in use:
+	org.apache.iceberg#iceberg-spark-runtime-3.5_2.12;1.10.2 from local-m2-cache in [default]
+	---------------------------------------------------------------------
+	|                  |            modules            ||   artifacts   |
+	|       conf       | number| search|dwnlded|evicted|| number|dwnlded|
+	---------------------------------------------------------------------
+	|      default     |   1   |   0   |   0   |   0   ||   1   |   0   |
+	---------------------------------------------------------------------
+:: retrieving :: org.apache.spark#spark-submit-parent-f3828301-6fa9-40ef-a62b-90a980afd228
+	confs: [default]
+	0 artifacts copied, 1 already retrieved (0kB/2ms)
+Inserted 4000 rows into local.db.spj_left and local.db.spj_right
+Partition specs:
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|createtab_stmt                                                                                                                                                                                                                                                                                                                                                                                                        |
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|CREATE TABLE local.db.spj_left (\n  id INT,\n  category STRING,\n  left_value INT)\nUSING iceberg\nPARTITIONED BY (category)\nCLUSTERED BY (id)\nINTO 8 BUCKETS\nLOCATION '/Users/irashid/tmp/test_iceberg_proj/warehouse/db/spj_left'\nTBLPROPERTIES (\n  'current-snapshot-id' = '1202449086989488332',\n  'format' = 'iceberg/parquet',\n  'format-version' = '2',\n  'write.parquet.compression-codec' = 'zstd')\n|
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|createtab_stmt                                                                                                                                                                                                                                                                                                                                                                                                           |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|CREATE TABLE local.db.spj_right (\n  id INT,\n  category STRING,\n  right_value INT)\nUSING iceberg\nPARTITIONED BY (category)\nCLUSTERED BY (id)\nINTO 8 BUCKETS\nLOCATION '/Users/irashid/tmp/test_iceberg_proj/warehouse/db/spj_right'\nTBLPROPERTIES (\n  'current-snapshot-id' = '1082334575583803776',\n  'format' = 'iceberg/parquet',\n  'format-version' = '2',\n  'write.parquet.compression-codec' = 'zstd')\n|
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+Joining on category and id (matching bucket partition keys):
+Join returned 4000 rows
+Storage Partitioned Join (SPJ) analysis:
+  Join operator: SortMergeJoin
+  SPJ used: YES
+  Reason: No shuffle Exchange nodes appear before the join; data was read co-partitioned.
+  Left input has pre-join shuffle: false
+  Right input has pre-join shuffle: false
+Relevant physical plan excerpt:
+== Physical Plan ==
+AdaptiveSparkPlan (19)
++- == Final Plan ==
+   * Sort (12)
+   +- AQEShuffleRead (11)
+      +- ShuffleQueryStage (10), Statistics(sizeInBytes=187.5 KiB, rowCount=4.00E+3)
+         +- Exchange (9)
+            +- * Project (8)
+               +- * SortMergeJoin Inner (7)
+                  :- * Sort (3)
+                  :  +- * ColumnarToRow (2)
+                  :     +- BatchScan local.db.spj_left (1)
+                  +- * Sort (6)
+                     +- * ColumnarToRow (5)
+                        +- BatchScan local.db.spj_right (4)
++- == Initial Plan ==
+   Sort (18)
+   +- Exchange (17)
+      +- Project (16)
+         +- SortMergeJoin Inner (15)
+            :- Sort (13)
+            :  +- BatchScan local.db.spj_left (1)
+            +- Sort (14)
+               +- BatchScan local.db.spj_right (4)
+
+
+(1) BatchScan local.db.spj_left
+Output [3]: [id#36, category#37, left_value#38]
+local.db.spj_left (branch=null) [filters=category IS NOT NULL, id IS NOT NULL, groupedBy=category, id_bucket]
+
+(2) ColumnarToRow [codegen id : 1]
+Input [3]: [id#36, category#37, left_value#38]
+
+(3) Sort [codegen id : 1]
+Input [3]: [id#36, category#37, left_value#38]
+Arguments: [category#37 ASC NULLS FIRST, id#36 ASC NULLS FIRST], false, 0
+
+(4) BatchScan local.db.spj_right
+Output [3]: [id#39, category#40, right_value#41]
+local.db.spj_right (branch=null) [filters=category IS NOT NULL, id IS NOT NULL, groupedBy=category, id_bucket]
+
+(5) ColumnarToRow [codegen id : 2]
+Input [3]: [id#39, category#40, right_value#41]
+
+(6) Sort [codegen id : 2]
+Input [3]: [id#39, category#40, right_value#41]
+Arguments: [category#40 ASC NULLS FIRST, id#39 ASC NULLS FIRST], false, 0
+
+(7) SortMergeJoin [codegen id : 3]
+Left keys [2]: [category#37, id#36]
+Right keys [2]: [category#40, id#39]
+Join type: Inner
+Join condition: None
+
+(8) Project [codegen id : 3]
+Output [4]: [id#36, category#37, left_value#38, right_value#41]
+Input [6]: [id#36, category#37, left_value#38, id#39, category#40, right_value#41]
+
+(9) Exchange
+Input [4]: [id#36, category#37, left_value#38, right_value#41]
+Arguments: rangepartitioning(id#36 ASC NULLS FIRST, 200), ENSURE_REQUIREMENTS, [plan_id=237]
+
+(10) ShuffleQueryStage
+Output [4]: [id#36, category#37, left_value#38, right_value#41]
+Arguments: 0
+
+(11) AQEShuffleRead
+Input [4]: [id#36, category#37, left_value#38, right_value#41]
+Arguments: coalesced
+
+(12) Sort [codegen id : 4]
+Input [4]: [id#36, category#37, left_value#38, right_value#41]
+Arguments: [id#36 ASC NULLS FIRST], true, 0
+
+(13) Sort
+Input [3]: [id#36, category#37, left_value#38]
+Arguments: [category#37 ASC NULLS FIRST, id#36 ASC NULLS FIRST], false, 0
+
+(14) Sort
+Input [3]: [id#39, category#40, right_value#41]
+Arguments: [category#40 ASC NULLS FIRST, id#39 ASC NULLS FIRST], false, 0
+
+(15) SortMergeJoin
+Left keys [2]: [category#37, id#36]
+Right keys [2]: [category#40, id#39]
+Join type: Inner
+Join condition: None
+
+(16) Project
+Output [4]: [id#36, category#37, left_value#38, right_value#41]
+Input [6]: [id#36, category#37, left_value#38, id#39, category#40, right_value#41]
+
+(17) Exchange
+Input [4]: [id#36, category#37, left_value#38, right_value#41]
+Arguments: rangepartitioning(id#36 ASC NULLS FIRST, 200), ENSURE_REQUIREMENTS, [plan_id=205]
+
+(18) Sort
+Input [4]: [id#36, category#37, left_value#38, right_value#41]
+Arguments: [id#36 ASC NULLS FIRST], true, 0
+
+(19) AdaptiveSparkPlan
+Output [4]: [id#36, category#37, left_value#38, right_value#41]
+Arguments: isFinalPlan=true
+
+
++---+--------+----------+-----------+
+|id |category|left_value|right_value|
++---+--------+----------+-----------+
+|0  |A       |0         |0          |
+|1  |B       |10        |100        |
+|2  |C       |20        |200        |
+|3  |D       |30        |300        |
+|4  |A       |40        |400        |
++---+--------+----------+-----------+
+only showing top 5 rows
+
